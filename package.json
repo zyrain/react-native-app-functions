@@ -1,6 +1,6 @@
 {
   "name": "react-native-app-functions",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.0-alpha.0-tasket.1",
   "description": "Expose React Native app functionality to on-device AI agents (Gemini and others) through Android AppFunctions, declared from TypeScript.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
