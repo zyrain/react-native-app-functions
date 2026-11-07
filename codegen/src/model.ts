@@ -45,6 +45,8 @@ export type FunctionModel = {
   title: string;
   params: FieldModel[];
   returns: ValueModel;
+  /** Who may call the function: `self` (the app's own agent) or the default trusted agents. */
+  accessLevel: 'self' | 'trusted';
 } & (
   | { handler: 'native' }
   /** Runs `registerAppFunctionHandler(name, …)` in JS via Headless JS. */

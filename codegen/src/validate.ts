@@ -207,7 +207,7 @@ export function validateConfig(raw: Literal): AppFunctionsModel {
     }
     checkKeys(
       spec,
-      ['description', 'title', 'handler', 'timeoutMs', 'params', 'returns'],
+      ['description', 'title', 'handler', 'timeoutMs', 'accessLevel', 'params', 'returns'],
       where,
       fail
     );
@@ -232,6 +232,14 @@ export function validateConfig(raw: Literal): AppFunctionsModel {
         fail(`${where}, field "title"`, 'must be a non-empty single line');
       } else {
         title = spec.title;
+      }
+    }
+    let accessLevel: 'self' | 'trusted' = 'trusted';
+    if (spec.accessLevel !== undefined) {
+      if (spec.accessLevel !== 'self' && spec.accessLevel !== 'trusted') {
+        fail(`${where}, field "accessLevel"`, 'must be "self" or "trusted"');
+      } else {
+        accessLevel = spec.accessLevel;
       }
     }
     const handler = spec.handler === 'js' ? 'js' : 'native';
@@ -275,6 +283,7 @@ export function validateConfig(raw: Literal): AppFunctionsModel {
       name,
       description: description ?? '',
       title,
+      accessLevel,
       ...(handler === 'js'
         ? { handler: 'js' as const, timeoutMs }
         : { handler: 'native' as const }),

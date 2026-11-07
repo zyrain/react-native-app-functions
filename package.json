@@ -6,18 +6,22 @@
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
     ".": {
+      "react-native": "./src/index.tsx",
       "react-native-app-functions-source": "./src/index.tsx",
       "types": "./lib/typescript/src/index.d.ts",
       "default": "./lib/module/index.js"
     },
     "./config": {
+      "react-native": "./src/config.ts",
       "react-native-app-functions-source": "./src/config.ts",
       "types": "./lib/typescript/src/config.d.ts",
       "default": "./lib/module/config.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./app.plugin.js": "./app.plugin.js"
   },
   "files": [
+    "app.plugin.js",
     "src",
     "lib",
     "android",

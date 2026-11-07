@@ -56,6 +56,11 @@ export type AppFunctionSpec = {
   handler: 'native' | 'js';
   /** `js` only: how long to wait for the handler, in ms. Default 10000. */
   timeoutMs?: number;
+  /**
+   * Android: who may call the function. `self` limits it to the app's own agent (for example the
+   * ML Kit Agent API); `trusted` (default) also allows trusted system agents such as Gemini.
+   */
+  accessLevel?: 'self' | 'trusted';
   params?: Record<string, AppFunctionValueSpec>;
   returns: AppFunctionValueSpec;
 };

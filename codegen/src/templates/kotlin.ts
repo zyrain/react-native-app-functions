@@ -56,6 +56,13 @@ export function serviceFile(m: AppFunctionsModel): string {
     ...kotlinImportsFor(
       m.functions.flatMap((f) => [f.returns, ...f.params.map((p) => p.value)])
     ),
+    ...(m.functions.some((f) => f.accessLevel === 'self')
+      ? [
+          'androidx.appfunctions.AppFunctionAccessLevel',
+          'androidx.appfunctions.ExperimentalAppFunctionsApi',
+          'androidx.appfunctions.metadata.AppFunctionMetadata',
+        ]
+      : []),
   ];
   const handlersProperty = native
     ? `
@@ -107,8 +114,14 @@ function declaration(f: FunctionModel): string {
         )
         .join('')}  )`
     : '()';
+  const access =
+    f.accessLevel === 'self'
+      ? `  @OptIn(ExperimentalAppFunctionsApi::class)
+  @AppFunctionAccessLevel(level = AppFunctionMetadata.ACCESS_LEVEL_SELF, isCompatEnforcementEnabled = true)
+`
+      : '';
   const head = `
-${doc}  @AppFunctionDeclaration(isDescribedByKDoc = true)
+${doc}${access}  @AppFunctionDeclaration(isDescribedByKDoc = true)
   suspend fun ${f.name}${signature}: ${kotlinType(f.returns)}`;
 
   if (f.handler === 'native') {
