@@ -46,7 +46,6 @@
   "scripts": {
     "example": "yarn workspace react-native-app-functions-example",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
-    "prepare": "bob build && tsc -p codegen/tsconfig.json",
     "typecheck": "tsc && tsc -p codegen/tsconfig.check.json",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "test": "jest"
