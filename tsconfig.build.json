@@ -4,6 +4,7 @@
     "example",
     "lib",
     "codegen",
-    "examples"
+    "examples",
+    "plugin"
   ]
 }
