@@ -12,7 +12,9 @@ on:
       - codegen/**
       - src/**
       - package.json
+      - yarn.lock
       - versions.json
+      - tsconfig*.json
       - .github/workflows/expo-plugin.yml
   pull_request:
     paths: *paths
