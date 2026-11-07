@@ -20,6 +20,7 @@
   },
   "files": [
     "app.plugin.js",
+    "plugin",
     "src",
     "lib",
     "android",
@@ -45,7 +46,7 @@
     "example": "yarn workspace react-native-app-functions-example",
     "clean": "del-cli android/build example/android/build example/android/app/build example/ios/build lib",
     "prepare": "bob build && tsc -p codegen/tsconfig.json",
-    "typecheck": "tsc && tsc -p codegen/tsconfig.check.json",
+    "typecheck": "tsc && tsc -p codegen/tsconfig.check.json && tsc -p plugin/tsconfig.check.json",
     "lint": "eslint \"**/*.{js,ts,tsx}\"",
     "test": "jest"
   },
@@ -157,7 +158,8 @@
   "jest": {
     "testEnvironment": "node",
     "roots": [
-      "<rootDir>/codegen"
+      "<rootDir>/codegen",
+      "<rootDir>/plugin"
     ],
     "testMatch": [
       "**/__tests__/**/*.test.ts"

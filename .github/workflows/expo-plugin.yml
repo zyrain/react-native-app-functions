@@ -1,0 +1,89 @@
+# Builds a new Expo app with the config plugin on Android and iOS, from the packed library, to
+# prove `expo prebuild` wires code generation into both native builds.
+name: Expo plugin
+
+on:
+  push:
+    paths: &paths
+      - app.plugin.js
+      - plugin/**
+      - android/**
+      - ios/**
+      - codegen/**
+      - src/**
+      - package.json
+      - versions.json
+      - .github/workflows/expo-plugin.yml
+  pull_request:
+    paths: *paths
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  EXPO_SDK: "58"
+  APP_NAME: AppFunctionsExpoPlugin
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Create the test app
+        run: .github/workflows/expo-plugin/create-app.sh
+
+      - name: Install JDK
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: zulu
+          java-version: "17"
+
+      - name: Prebuild and build
+        working-directory: ../test-app
+        run: |
+          npx expo prebuild --platform android --no-install
+          (cd android && ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon)
+
+      - name: Check the generated AppFunction service was compiled
+        working-directory: ../test-app
+        run: |
+          find android/app/build -name 'ExpoPluginAppFunctionService*.class' | grep -q . \
+            || { echo "The generated AppFunction service is missing"; exit 1; }
+
+  ios:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Create the test app
+        run: .github/workflows/expo-plugin/create-app.sh
+
+      - name: Prebuild (runs pod install)
+        working-directory: ../test-app
+        run: npx expo prebuild --platform ios
+
+      - name: Check the App Intents were generated and wired into the target
+        working-directory: ../test-app
+        run: |
+          test -s "ios/$APP_NAME/AppFunctions.generated.swift"
+          grep -q 'AppFunctions.generated.swift' "ios/$APP_NAME.xcodeproj/project.pbxproj"
+          grep -q 'Generate App Intents' "ios/$APP_NAME.xcodeproj/project.pbxproj"
+
+      - name: Build for the simulator
+        working-directory: ../test-app
+        run: |
+          xcodebuild -workspace "ios/$APP_NAME.xcworkspace" -scheme "$APP_NAME" \
+            -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -50
+          test "${PIPESTATUS[0]}" -eq 0
