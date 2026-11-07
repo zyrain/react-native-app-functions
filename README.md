@@ -70,9 +70,12 @@ exactly this setup (`.github/workflows/expo-plugin.yml`).
    setup below) and run `npx expo prebuild`.
 
 The plugin applies the Android and iOS setup described below: KSP and `appfunctions.gradle` in the
-Gradle files, and `appfunctions_post_install` in the Podfile. Running prebuild again does not add
-them twice. If your native projects differ from Expo's templates and the plugin cannot find where
-to add them, prebuild stops with an error rather than leaving the setup out.
+Gradle files, and `appfunctions_post_install` in the Podfile. It edits the native projects that
+`expo prebuild` generates, using Expo's own code generator: each addition is a marked
+`@generated` block, so running prebuild again neither duplicates nor loses it. Like Expo's own
+plugins, it locates those blocks by matching lines of Expo's templates; if you customise the
+native files and it cannot find a match, prebuild stops with an error, and you can apply the bare
+React Native setup below by hand instead.
 
 ## Setup (bare React Native)
 

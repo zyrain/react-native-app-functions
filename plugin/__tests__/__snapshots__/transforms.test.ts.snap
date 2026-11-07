@@ -2,7 +2,9 @@
 
 exports[`android/app/build.gradle applies KSP after the Android application plugin and appfunctions.gradle at the end 1`] = `
 "apply plugin: "com.android.application"
-apply plugin: "com.google.devtools.ksp" // react-native-app-functions
+// @generated begin react-native-app-functions-ksp - expo prebuild (DO NOT MODIFY) sync-f90266fd5aa2df2594eb2e4078c66d5b861c5938
+apply plugin: "com.google.devtools.ksp"
+// @generated end react-native-app-functions-ksp
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
@@ -184,11 +186,13 @@ dependencies {
         implementation jscFlavor
     }
 }
-apply from: "../../node_modules/react-native-app-functions/android/appfunctions.gradle" // react-native-app-functions
+// @generated begin react-native-app-functions-script - expo prebuild (DO NOT MODIFY) sync-50af29f8a0bb8f795ec019cd9087354e3c5492b5
+apply from: "../../node_modules/react-native-app-functions/android/appfunctions.gradle"
+// @generated end react-native-app-functions-script
 "
 `;
 
-exports[`android/build.gradle adds the KSP plugin to the buildscript classpath 1`] = `
+exports[`android/build.gradle adds the KSP plugin to the buildscript classpath in a generated block 1`] = `
 "// Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
@@ -197,7 +201,9 @@ buildscript {
     mavenCentral()
   }
   dependencies {
-    classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.12") // react-native-app-functions
+// @generated begin react-native-app-functions-ksp-classpath - expo prebuild (DO NOT MODIFY) sync-25522bca1a2481c0fe6335ed395b5be0978784a1
+    classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:2.3.12")
+// @generated end react-native-app-functions-ksp-classpath
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
     def kotlinVersion = findProperty('android.kotlinVersion')
@@ -218,12 +224,14 @@ apply plugin: "com.facebook.react.rootproject"
 "
 `;
 
-exports[`ios/Podfile calls appfunctions_post_install last in the post_install block, after React Native's step 1`] = `
-"require File.join(File.dirname(\`node --print "require.resolve('expo/package.json')"\`), "scripts/autolinking")
+exports[`ios/Podfile calls appfunctions_post_install in the post_install block 1`] = `
+"# @generated begin react-native-app-functions-require - expo prebuild (DO NOT MODIFY) sync-6ded1502cb124ba92fa1fbd4d624291790171de4
+require File.join(File.dirname(\`node --print "require.resolve('react-native-app-functions/package.json')"\`), "ios/appfunctions")
+# @generated end react-native-app-functions-require
+require File.join(File.dirname(\`node --print "require.resolve('expo/package.json')"\`), "scripts/autolinking")
 require File.join(File.dirname(\`node --print "require.resolve('react-native/package.json')"\`), "scripts/react_native_pods")
 
 require 'json'
-require File.join(File.dirname(\`node --print "require.resolve('react-native-app-functions/package.json')"\`), "ios/appfunctions") # react-native-app-functions
 podfile_properties = JSON.parse(File.read(File.join(__dir__, 'Podfile.properties.json'))) rescue {}
 
 def ccache_enabled?(podfile_properties)
@@ -279,13 +287,15 @@ target 'HelloWorld' do
   )
 
   post_install do |installer|
+# @generated begin react-native-app-functions-post-install - expo prebuild (DO NOT MODIFY) sync-260c2f55188a82f601b59954aaf07bbee1b72a59
+    appfunctions_post_install(installer)
+# @generated end react-native-app-functions-post-install
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
-    appfunctions_post_install(installer) # react-native-app-functions
   end
 end
 "

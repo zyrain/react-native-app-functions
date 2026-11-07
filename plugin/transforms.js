@@ -1,15 +1,18 @@
 /**
- * The text edits the Expo config plugin (app.plugin.js) makes to the native projects that
- * `expo prebuild` generates. They are plain string functions so they can be tested without Expo.
+ * The edits the Expo config plugin (app.plugin.js) makes to the native projects `expo prebuild`
+ * generates from Expo's templates.
  *
- * - Idempotent: applying an edit to its own output changes nothing.
- * - Existing setup is recognised only in code, never in comments.
- * - LF and CRLF files are both accepted; insertions use the file's own line ending.
- * - When the expected anchor is missing (a template this plugin does not recognise), the edit
- *   throws instead of silently leaving the project unconfigured.
+ * They use Expo's own code generator (`CodeGenerator.mergeContents` from expo/config-plugins), the
+ * same mechanism Expo's first-party plugins use: each insertion is a tagged
+ * `@generated begin … @generated end` block placed relative to an anchor line, so prebuild can run
+ * again without duplicating it and a changed block replaces the old one. Like Expo's plugins, the
+ * anchors target Expo's generated files; customised native files may need the README's manual
+ * setup instead. When an anchor is missing, the edit throws rather than leaving the project
+ * unconfigured. CRLF files are accepted and keep their line endings.
  */
-const MARKER = '// react-native-app-functions';
-const PODFILE_MARKER = '# react-native-app-functions';
+const { CodeGenerator } = require('expo/config-plugins');
+
+const TAG = 'react-native-app-functions';
 
 class AppFunctionsPluginError extends Error {
   constructor(file, message) {
@@ -21,125 +24,103 @@ class AppFunctionsPluginError extends Error {
   }
 }
 
-const lineEnding = (text) => (text.includes('\r\n') ? '\r\n' : '\n');
-
-/** Whether any line, outside comments, matches `pattern` (anchored at the line's code start). */
-function hasCodeLine(text, pattern, commentPrefix) {
-  return text.split(/\r?\n/).some((line) => {
-    const code = line.trimStart();
-    return !code.startsWith(commentPrefix) && pattern.test(code);
-  });
+/** Runs `edit` on LF text and restores CRLF line endings if the file used them. */
+function withLineEndings(text, edit) {
+  const crlf = text.includes('\r\n');
+  const result = edit(crlf ? text.replace(/\r\n/g, '\n') : text);
+  return crlf ? result.replace(/\r?\n/g, '\r\n') : result;
 }
 
-/** Gradle code without block comments, so lines inside one are not mistaken for code. */
-const withoutBlockComments = (gradle) =>
-  gradle.replace(/\/\*[\s\S]*?\*\//g, '');
-
-const gradleHas = (gradle, pattern) =>
-  hasCodeLine(withoutBlockComments(gradle), pattern, '//');
-
-const KSP_CLASSPATH =
-  /^classpath\s*\(?\s*["']com\.google\.devtools\.ksp:symbol-processing-gradle-plugin[:"']/;
-const KSP_APPLIED =
-  /^(apply\s+plugin\s*:\s*["']com\.google\.devtools\.ksp["']|id\s*\(?\s*["']com\.google\.devtools\.ksp["'])/;
-const SCRIPT_APPLIED =
-  /^apply\s+from\s*:\s*["'][^"']*\/appfunctions\.gradle["']/;
+/** `mergeContents`, reporting a missing anchor as an AppFunctionsPluginError. */
+function merge(file, missing, options) {
+  try {
+    return CodeGenerator.mergeContents(options).contents;
+  } catch (error) {
+    if (error && error.code === 'ERR_NO_MATCH') {
+      throw new AppFunctionsPluginError(file, missing);
+    }
+    throw error;
+  }
+}
 
 /** android/build.gradle: adds the KSP Gradle plugin to the buildscript classpath. */
 function addKspClasspath(gradle, kspVersion) {
-  if (gradleHas(gradle, KSP_CLASSPATH)) return gradle;
-  const anchor = /buildscript\s*\{[\s\S]*?dependencies\s*\{[ \t]*/;
-  if (!anchor.test(gradle)) {
-    throw new AppFunctionsPluginError(
-      'android/build.gradle',
-      'no `buildscript { dependencies { … } }` block'
-    );
-  }
-  const eol = lineEnding(gradle);
-  return gradle.replace(
-    anchor,
-    (match) =>
-      `${match}${eol}    classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:${kspVersion}") ${MARKER}`
+  return withLineEndings(gradle, (src) =>
+    merge('android/build.gradle', 'no `buildscript { dependencies {` line', {
+      src,
+      newSrc: `    classpath("com.google.devtools.ksp:symbol-processing-gradle-plugin:${kspVersion}")`,
+      tag: `${TAG}-ksp-classpath`,
+      anchor: /^\s*dependencies\s*\{/,
+      offset: 1,
+      comment: '//',
+    })
   );
 }
 
 /**
- * android/app/build.gradle: applies the KSP plugin after the Android application plugin and applies
- * this library's appfunctions.gradle, given as a path relative to android/app.
+ * android/app/build.gradle: applies the KSP plugin after the Android application plugin, and this
+ * library's appfunctions.gradle (a path relative to android/app) at the end of the file, where the
+ * README places it.
  */
 function applyAppFunctionsGradle(gradle, scriptPath) {
-  const eol = lineEnding(gradle);
-  let result = gradle;
-  if (!gradleHas(result, KSP_APPLIED)) {
-    const anchor =
-      /^[ \t]*apply\s+plugin\s*:\s*["']com\.android\.application["'][ \t]*\r?\n/m;
-    if (!anchor.test(result)) {
-      throw new AppFunctionsPluginError(
-        'android/app/build.gradle',
-        'no `apply plugin: "com.android.application"` line'
-      );
-    }
-    result = result.replace(
-      anchor,
-      (match) =>
-        `${match}apply plugin: "com.google.devtools.ksp" ${MARKER}${eol}`
+  return withLineEndings(gradle, (src) => {
+    const withKsp = merge(
+      'android/app/build.gradle',
+      'no `apply plugin: "com.android.application"` line',
+      {
+        src,
+        newSrc: 'apply plugin: "com.google.devtools.ksp"',
+        tag: `${TAG}-ksp`,
+        anchor: /^\s*apply\s+plugin\s*:\s*["']com\.android\.application["']/,
+        offset: 1,
+        comment: '//',
+      }
     );
-  }
-  if (!gradleHas(result, SCRIPT_APPLIED)) {
-    result = `${result.replace(/(\r?\n)*$/, eol)}apply from: "${scriptPath}" ${MARKER}${eol}`;
-  }
-  return result;
+    return appendGenerated(withKsp, {
+      newSrc: `apply from: "${scriptPath}"`,
+      tag: `${TAG}-script`,
+      comment: '//',
+    });
+  });
 }
 
-const POD_REQUIRE = /^require\b.*["']ios\/appfunctions["']/;
-const POD_HOOK = /^appfunctions_post_install\s*\(/;
+/** Appends a tagged block at the end of the file, in mergeContents' format. */
+function appendGenerated(src, { newSrc, tag, comment }) {
+  const header = CodeGenerator.createGeneratedHeaderComment(
+    newSrc,
+    tag,
+    comment
+  );
+  if (src.includes(header)) return src;
+  const base = CodeGenerator.removeGeneratedContents(src, tag) ?? src;
+  return `${base.replace(/\n*$/, '\n')}${header}\n${newSrc}\n${comment} @generated end ${tag}\n`;
+}
 
 /**
  * ios/Podfile: loads this library's ios/appfunctions.rb (located with Node, like Expo's own
- * requires, so it works with any node_modules layout) and calls `appfunctions_post_install` at the
- * end of the existing `post_install` block, after React Native's post-install step.
+ * requires, so any node_modules layout works) and calls `appfunctions_post_install` in the
+ * `post_install` block.
  */
 function addPodfileSetup(podfile) {
-  const eol = lineEnding(podfile);
-  let result = podfile;
-  if (!hasCodeLine(result, POD_REQUIRE, '#')) {
-    const requireLine =
-      'require File.join(File.dirname(`node --print "require.resolve(\'react-native-app-functions/package.json\')"`), "ios/appfunctions") ' +
-      PODFILE_MARKER;
-    const lastRequire = [...result.matchAll(/^require\b[^\r\n]*/gm)].pop();
-    if (lastRequire) {
-      const at = lastRequire.index + lastRequire[0].length;
-      result = `${result.slice(0, at)}${eol}${requireLine}${result.slice(at)}`;
-    } else {
-      result = `${requireLine}${eol}${result}`;
-    }
-  }
-  if (!hasCodeLine(result, POD_HOOK, '#')) {
-    const opening =
-      /^([ \t]*)post_install\s+do\s*\|\s*installer\s*\|[ \t]*\r?\n/m.exec(
-        result
-      );
-    if (!opening) {
-      throw new AppFunctionsPluginError(
-        'ios/Podfile',
-        'no `post_install do |installer|` block'
-      );
-    }
-    const indent = opening[1];
-    const bodyStart = opening.index + opening[0].length;
-    const end = new RegExp(`^${indent}end[ \\t]*\\r?$`, 'm').exec(
-      result.slice(bodyStart)
-    );
-    if (!end) {
-      throw new AppFunctionsPluginError(
-        'ios/Podfile',
-        'cannot find the end of the `post_install` block'
-      );
-    }
-    const at = bodyStart + end.index;
-    result = `${result.slice(0, at)}${indent}  appfunctions_post_install(installer) ${PODFILE_MARKER}${eol}${result.slice(at)}`;
-  }
-  return result;
+  return withLineEndings(podfile, (src) => {
+    const withRequire = merge('ios/Podfile', 'no `require` line', {
+      src,
+      newSrc:
+        'require File.join(File.dirname(`node --print "require.resolve(\'react-native-app-functions/package.json\')"`), "ios/appfunctions")',
+      tag: `${TAG}-require`,
+      anchor: /^require\s/,
+      offset: 0,
+      comment: '#',
+    });
+    return merge('ios/Podfile', 'no `post_install do |installer|` line', {
+      src: withRequire,
+      newSrc: '    appfunctions_post_install(installer)',
+      tag: `${TAG}-post-install`,
+      anchor: /^\s*post_install\s+do\s*\|\s*installer\s*\|/,
+      offset: 1,
+      comment: '#',
+    });
+  });
 }
 
 module.exports = {
