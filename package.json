@@ -15,9 +15,11 @@
       "types": "./lib/typescript/src/config.d.ts",
       "default": "./lib/module/config.js"
     },
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./app.plugin.js": "./app.plugin.js"
   },
   "files": [
+    "app.plugin.js",
     "src",
     "lib",
     "android",
