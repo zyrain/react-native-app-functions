@@ -43,25 +43,36 @@ yarn add react-native-app-functions@alpha
 
 ## Setup (Expo)
 
-Add the config plugin to your app config, and the Android build settings AppFunctions needs:
+Tested with Expo SDK 58 (React Native 0.88) on Android and iOS; CI builds a new SDK 58 app with
+exactly this setup (`.github/workflows/expo-plugin.yml`).
 
-```json
-{
-  "expo": {
-    "plugins": [
-      "react-native-app-functions",
-      ["expo-build-properties", { "android": { "compileSdkVersion": 37, "targetSdkVersion": 37 } }]
-    ]
-  }
-}
-```
+1. Install the library and `expo-build-properties`, which sets the Android SDK level AppFunctions
+   needs:
 
-Then create `appfunctions.config.ts` next to your `package.json` (step 3 below) and run
-`npx expo prebuild`. The plugin applies the Android and iOS setup described below: KSP and
-`appfunctions.gradle` in the Gradle files, and `appfunctions_post_install` in the Podfile. If your
-native projects differ from Expo's templates and it cannot find where to add them, prebuild stops
-with an error rather than leaving the setup out. CI builds a new Expo app on both platforms with it
-(`.github/workflows/expo-plugin.yml`).
+   ```sh
+   npx expo install react-native-app-functions expo-build-properties
+   ```
+
+2. Add both plugins to your app config:
+
+   ```json
+   {
+     "expo": {
+       "plugins": [
+         "react-native-app-functions",
+         ["expo-build-properties", { "android": { "compileSdkVersion": 37, "targetSdkVersion": 37 } }]
+       ]
+     }
+   }
+   ```
+
+3. Create `appfunctions.config.ts` next to your `package.json` (step 3 of the bare React Native
+   setup below) and run `npx expo prebuild`.
+
+The plugin applies the Android and iOS setup described below: KSP and `appfunctions.gradle` in the
+Gradle files, and `appfunctions_post_install` in the Podfile. Running prebuild again does not add
+them twice. If your native projects differ from Expo's templates and the plugin cannot find where
+to add them, prebuild stops with an error rather than leaving the setup out.
 
 ## Setup (bare React Native)
 

@@ -16,6 +16,7 @@ on:
       - versions.json
       - tsconfig*.json
       - .github/workflows/expo-plugin.yml
+      - .github/workflows/expo-plugin/**
   pull_request:
     paths: *paths
   workflow_dispatch:
@@ -53,6 +54,14 @@ jobs:
           npx expo prebuild --platform android --no-install
           (cd android && ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon)
 
+      - name: Prebuild again and check nothing was added twice
+        working-directory: ../test-app
+        run: |
+          npx expo prebuild --platform android --no-install
+          test "$(grep -c 'symbol-processing-gradle-plugin' android/build.gradle)" -eq 1
+          test "$(grep -c 'com.google.devtools.ksp' android/app/build.gradle)" -eq 1
+          test "$(grep -c 'appfunctions.gradle' android/app/build.gradle)" -eq 1
+
       - name: Check the generated AppFunction service was compiled
         working-directory: ../test-app
         run: |
@@ -81,6 +90,14 @@ jobs:
           test -s "ios/$APP_NAME/AppFunctions.generated.swift"
           grep -q 'AppFunctions.generated.swift' "ios/$APP_NAME.xcodeproj/project.pbxproj"
           grep -q 'Generate App Intents' "ios/$APP_NAME.xcodeproj/project.pbxproj"
+
+      - name: Prebuild again and check nothing was added twice
+        working-directory: ../test-app
+        run: |
+          npx expo prebuild --platform ios
+          test "$(grep -c 'ios/appfunctions' ios/Podfile)" -eq 1
+          test "$(grep -c 'appfunctions_post_install(installer)' ios/Podfile)" -eq 1
+          test "$(grep -c 'Generate App Intents \*/ = {' "ios/$APP_NAME.xcodeproj/project.pbxproj")" -eq 1
 
       - name: Build for the simulator
         working-directory: ../test-app
