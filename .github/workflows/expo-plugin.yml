@@ -54,6 +54,12 @@ jobs:
           npx expo prebuild --platform android --no-install
           (cd android && ./gradlew assembleDebug -PreactNativeArchitectures=x86_64 --no-daemon)
 
+      - name: Check the generated AppFunction service was compiled
+        working-directory: ../test-app
+        run: |
+          find android/app/build -name 'ExpoPluginAppFunctionService*.class' | grep -q . \
+            || { echo "The generated AppFunction service is missing"; exit 1; }
+
       - name: Prebuild again and check nothing was added twice
         working-directory: ../test-app
         run: |
@@ -61,12 +67,6 @@ jobs:
           test "$(grep -c 'symbol-processing-gradle-plugin' android/build.gradle)" -eq 1
           test "$(grep -c 'com.google.devtools.ksp' android/app/build.gradle)" -eq 1
           test "$(grep -c 'appfunctions.gradle' android/app/build.gradle)" -eq 1
-
-      - name: Check the generated AppFunction service was compiled
-        working-directory: ../test-app
-        run: |
-          find android/app/build -name 'ExpoPluginAppFunctionService*.class' | grep -q . \
-            || { echo "The generated AppFunction service is missing"; exit 1; }
 
   ios:
     runs-on: macos-26
