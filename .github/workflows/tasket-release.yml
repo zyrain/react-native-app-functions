@@ -44,4 +44,6 @@ jobs:
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" "$TARBALL" --title "$GITHUB_REF_NAME" --notes "Prerelease for Fruit Tasket: upstream ${{ github.sha }} plus the Expo config plugin." --prerelease
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$TARBALL" --prerelease --title "$GITHUB_REF_NAME" \
+            --notes "Prerelease for Fruit Tasket (commit $GITHUB_SHA): upstream plus the Expo config plugin."
